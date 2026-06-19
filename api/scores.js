@@ -2,6 +2,7 @@ const memoryStore = globalThis.__ltdScores ?? new Map();
 globalThis.__ltdScores = memoryStore;
 
 const MAX_SCORES = 25;
+const MAX_SCORE = 9999;
 
 function cleanRoom(room) {
   return String(room || "ltd").replace(/[^a-z0-9_-]/gi, "").slice(0, 40) || "ltd";
@@ -89,7 +90,7 @@ export default async function handler(request, response) {
 
     if (request.method === "POST") {
       const room = cleanRoom(request.body?.room);
-      const score = Math.max(0, Math.min(12, Number(request.body?.score) || 0));
+      const score = Math.max(0, Math.min(MAX_SCORE, Number(request.body?.score) || 0));
       const entry = normalizeEntry({
         id: crypto.randomUUID(),
         name: request.body?.name,

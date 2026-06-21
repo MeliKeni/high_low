@@ -18,6 +18,7 @@ const ROOM_ID = "ltd";
 const LOCAL_NETWORK_HOST = "10.4.52.206";
 const EVENT_BACKGROUND = "/assets/ltd-background.jpg";
 const EVENT_FLYER = "/assets/ltd-flyer.png";
+const COUNTRY_PHOTO_DIR = "/assets/countries";
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -35,6 +36,20 @@ function getInitials(name) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function getCountryPhotoSlug(name) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function getLocalCountryPhotoUrls(country) {
+  const slug = getCountryPhotoSlug(country.country);
+  return ["jpg", "jpeg", "png"].map((extension) => `${COUNTRY_PHOTO_DIR}/${slug}.${extension}`);
 }
 
 function getCommunityPhotoUrl(country) {
@@ -368,14 +383,16 @@ function PlayerScreen() {
 
 function DuelCard({ country, known = false, feedback = null, onAnswer, side }) {
   const revealed = known || Boolean(feedback);
+  const localPhotoUrls = getLocalCountryPhotoUrls(country);
   const photoUrl = getCommunityPhotoUrl(country);
+  const backgroundImages = [...localPhotoUrls, photoUrl].map((url) => `url("${url}")`).join(", ");
 
   return (
     <View
       style={[
         styles.duelCard,
         side === "right" && styles.duelCardRight,
-        { backgroundImage: `linear-gradient(180deg, rgba(9, 50, 74, 0.44), rgba(7, 31, 49, 0.82)), url("${photoUrl}")` }
+        { backgroundImage: `linear-gradient(180deg, rgba(9, 50, 74, 0.44), rgba(7, 31, 49, 0.82)), ${backgroundImages}` }
       ]}
     >
       <View style={styles.duelPhotoShade} />

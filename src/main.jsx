@@ -37,6 +37,11 @@ function getInitials(name) {
     .toUpperCase();
 }
 
+function getCommunityPhotoUrl(country) {
+  const query = encodeURIComponent(`${country.country} synagogue jewish community`);
+  return `https://source.unsplash.com/900x700/?${query}`;
+}
+
 function useViewportWidth() {
   const [width, setWidth] = useState(() => (typeof window === "undefined" ? 1024 : window.innerWidth));
 
@@ -95,79 +100,62 @@ function useLeaderboard(room = ROOM_ID) {
 
 function HostScreen() {
   const { scores, loading } = useLeaderboard();
-  const [qrHost, setQrHost] = useState(getSavedQrHost);
+  const width = useViewportWidth();
+  const isStackedHost = width < 980;
+  const isNarrowHost = width < 640;
+  const qrHost = getSavedQrHost();
+  const topScores = scores.slice(0, 8);
   const port = window.location.port ? `:${window.location.port}` : "";
   const qrTarget = qrHost.trim() || window.location.hostname;
   const baseUrl = qrTarget.startsWith("http") ? qrTarget.replace(/\/$/, "") : `${window.location.protocol}//${qrTarget}${port}`;
   const playUrl = `${baseUrl}/play?room=${ROOM_ID}`;
 
-  function updateQrHost(value) {
-    setQrHost(value);
-    localStorage.setItem("ltdQrHost", value);
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.hostShell}>
-        <View style={styles.topNav}>
-          <Text style={styles.brandMark}>BBYO Argentina</Text>
-          <View style={styles.navLinks}>
-            <Text style={styles.navLink}>Chapters</Text>
-            <Text style={styles.navLink}>Regional</Text>
-            <Text style={styles.navLink}>Gallery</Text>
-          </View>
+      <ScrollView contentContainerStyle={[styles.hostShell, { backgroundImage: `linear-gradient(180deg, rgba(7, 31, 49, 0.52), rgba(9, 50, 74, 0.68)), url(${EVENT_BACKGROUND})` }]}>
+        <View style={styles.homeNav}>
+          <Text style={styles.homeBrand}>BBYO Argentina</Text>
+          <Text style={styles.homeEvent}>Leadership Training Day</Text>
         </View>
 
-        <View style={[styles.hostHero, { backgroundImage: `linear-gradient(90deg, rgba(83, 181, 224, 0.95), rgba(83, 181, 224, 0.76)), url(${EVENT_BACKGROUND})` }]}>
-          <View style={styles.heroContent}>
-            <Text style={styles.kicker}>Leadership Training Day</Text>
-            <Text style={styles.hostTitle}>Higher or Lower</Text>
-            <Text style={styles.hostCopy}>Una experiencia regional para jugar, liderar y descubrir comunidades judias alrededor del mundo.</Text>
-            <Pressable style={styles.linkButton} onPress={() => window.open(playUrl, "_blank")}>
-              <Text style={styles.linkButtonText}>Abrir juego</Text>
-            </Pressable>
-          </View>
-          <View style={[styles.flyerPreview, { backgroundImage: `url(${EVENT_FLYER})` }]}>
-            <Text style={styles.flyerFallback}>LTD 4th edition</Text>
-          </View>
-        </View>
-
-        <View style={styles.opportunityStrip}>
-          <Text style={styles.opportunityLabel}>BBYO ARGENTINA</Text>
-          <Text style={styles.opportunityTitle}>More jewish teens, more meaningful experiences</Text>
-          <Text style={styles.opportunityMeta}>Sin limite de rondas</Text>
-        </View>
-
-        <View style={styles.hostGrid}>
-          <View style={styles.qrPanel}>
-            <Text style={[styles.panelTitle, styles.qrPanelTitle]}>Escanea para jugar</Text>
-            <View style={styles.qrBox}>
-              <QRCodeSVG value={playUrl} size={280} level="H" bgColor="#fffaf0" fgColor="#101820" />
-            </View>
-            <TextInput
-              style={styles.networkInput}
-              value={qrHost}
-              onChangeText={updateQrHost}
-              placeholder="IP o URL para el QR"
-              placeholderTextColor="#7b8390"
-            />
-            <Text style={styles.urlText}>{playUrl}</Text>
-            <Text style={styles.helperText}>Si el celular no abre, proba escribir esta URL manualmente. Tiene que estar en el mismo Wi-Fi que esta compu.</Text>
-          </View>
-
-          <View style={styles.boardPanel}>
-            <View style={styles.boardHeader}>
-              <Text style={styles.panelTitle}>Ranking en vivo</Text>
-              {loading ? <ActivityIndicator color="#f2c94c" /> : <Text style={styles.countText}>{scores.length} jugadores</Text>}
-            </View>
-            {scores.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Todavia no hay puntajes</Text>
-                <Text style={styles.emptyCopy}>Cuando alguien termine una partida, aparece aca automaticamente.</Text>
+        <View style={[styles.coverLayout, isStackedHost && styles.coverLayoutStacked]}>
+          <View style={[styles.coverLeaderboard, isStackedHost && styles.coverSideStacked]}>
+            <Text style={styles.leaderRibbon}>Top puntajes</Text>
+            {loading ? (
+              <ActivityIndicator color="#1597d3" />
+            ) : topScores.length === 0 ? (
+              <View style={styles.emptyLeaderRows}>
+                <Text style={styles.emptyLeaderText}>Todavia no hay jugadores</Text>
+                <Text style={styles.emptyLeaderSubtext}>El ranking aparece aca en vivo</Text>
               </View>
             ) : (
-              scores.map((entry, index) => <ScoreRow key={`${entry.id}-${index}`} entry={entry} rank={index + 1} />)
+              topScores.map((entry, index) => (
+                <View style={styles.coverScoreRow} key={`${entry.id}-${index}`}>
+                  <Text style={styles.coverScoreRank}>{index + 1}</Text>
+                  <Text style={styles.coverScoreName}>{entry.name}</Text>
+                  <Text style={styles.coverScoreValue}>{entry.score}</Text>
+                </View>
+              ))
             )}
+          </View>
+
+          <View style={[styles.coverCenter, isStackedHost && styles.coverCenterStacked]}>
+            <View style={styles.titleLockup}>
+              <Text style={styles.titleSmall}>THE</Text>
+              <Text style={[styles.titleHigher, isNarrowHost && styles.titleHigherNarrow]}>HIGHER</Text>
+              <Text style={[styles.titleLower, isNarrowHost && styles.titleLowerNarrow]}>LOWER</Text>
+              <Text style={styles.titleSmall}>GAME</Text>
+            </View>
+            <Text style={styles.coverQuestion}>Que comunidad judia es mas grande?</Text>
+            <Pressable style={styles.coverButton} onPress={() => window.open(playUrl, "_blank")}>
+              <Text style={styles.coverButtonText}>Jugar</Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.coverQrPanel, isStackedHost && styles.coverSideStacked]}>
+            <View style={styles.qrCardLarge}>
+              <QRCodeSVG value={playUrl} size={210} level="H" bgColor="#ffffff" fgColor="#1597d3" />
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -193,8 +181,6 @@ function ScoreRow({ entry, rank }) {
 function PlayerScreen() {
   const params = new URLSearchParams(window.location.search);
   const room = params.get("room") || ROOM_ID;
-  const width = useViewportWidth();
-  const isCompactGame = width < 760;
   const [name, setName] = useState("");
   const [started, setStarted] = useState(false);
   const [deck, setDeck] = useState(() => shuffle(countries));
@@ -349,17 +335,16 @@ function PlayerScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.gameShell, { backgroundImage: `linear-gradient(180deg, rgba(236, 249, 255, 0.96), rgba(255, 255, 255, 0.94)), url(${EVENT_BACKGROUND})` }]}>
+      <View style={styles.gameShell}>
         <View style={styles.gameTopbar}>
           <Text style={styles.statText}>Ronda {round}</Text>
           <Text style={styles.scoreTicker}>Score {score}</Text>
           <Text style={styles.statText}>Best {bestScore}</Text>
         </View>
 
-        <View style={[styles.duelStage, isCompactGame && styles.duelStageCompact]}>
+        <View style={styles.duelStage}>
           <DuelCard country={left} known side="left" />
-          <View style={[styles.centerBadge, isCompactGame && styles.centerBadgeCompact]}>
-            <Text style={styles.centerScore}>{score}</Text>
+          <View style={styles.centerBadge}>
             <Text style={styles.centerLabel}>VS</Text>
           </View>
           <DuelCard country={right} feedback={feedback} onAnswer={answer} side="right" />
@@ -372,7 +357,7 @@ function PlayerScreen() {
               <Text style={styles.feedbackCopy}>{feedback.detail}</Text>
             </View>
           ) : (
-            <Text style={styles.questionText}>Tiene una comunidad judia mas grande o mas chica?</Text>
+            <Text style={styles.questionText}>Elegi para seguir jugando</Text>
           )}
           <Text style={styles.streakText}>Racha actual: {streak}</Text>
         </View>
@@ -383,24 +368,33 @@ function PlayerScreen() {
 
 function DuelCard({ country, known = false, feedback = null, onAnswer, side }) {
   const revealed = known || Boolean(feedback);
+  const photoUrl = getCommunityPhotoUrl(country);
 
   return (
-    <View style={[styles.duelCard, side === "right" && styles.duelCardRight]}>
-      <View style={styles.countryStamp}>
-        <Text style={styles.flag}>{getInitials(country.country)}</Text>
-      </View>
+    <View
+      style={[
+        styles.duelCard,
+        side === "right" && styles.duelCardRight,
+        { backgroundImage: `linear-gradient(180deg, rgba(9, 50, 74, 0.44), rgba(7, 31, 49, 0.82)), url("${photoUrl}")` }
+      ]}
+    >
+      <View style={styles.duelPhotoShade} />
       <View style={styles.duelTextBlock}>
-        <Text style={[styles.cardPrompt, side === "right" && styles.cardPromptRight]}>{known ? "tiene" : "tiene..."}</Text>
-        <Text style={[styles.countryName, side === "right" && styles.countryNameRight]}>{country.country}</Text>
-        <Text style={[styles.countryRegion, side === "right" && styles.countryRegionRight]}>{country.region}</Text>
+        <View style={styles.countryStamp}>
+          <Text style={styles.flag}>{getInitials(country.country)}</Text>
+        </View>
+        <Text style={styles.cardPrompt}>{known ? "La comunidad judia de" : "La comunidad judia de"}</Text>
+        <Text style={styles.countryName}>{country.country}</Text>
+        <Text style={styles.countryRegion}>{country.region}</Text>
       </View>
       {revealed ? (
         <View style={styles.populationBlock}>
-          <Text style={[styles.populationValue, side === "right" && styles.populationValueRight]}>{formatNumber(country.population)}</Text>
-          <Text style={[styles.populationLabel, side === "right" && styles.populationLabelRight]}>personas estimadas</Text>
+          <Text style={styles.populationValue}>{formatNumber(country.population)}</Text>
+          <Text style={styles.populationLabel}>personas estimadas</Text>
         </View>
       ) : (
         <View style={styles.actionStack}>
+          <Text style={styles.choiceLead}>es mas grande o mas chica?</Text>
           <Pressable style={styles.choiceButton} onPress={() => onAnswer("higher")}>
             <Text style={styles.choiceButtonText}>Higher</Text>
             <Text style={styles.choiceButtonSubtext}>mas grande</Text>
@@ -427,9 +421,275 @@ const styles = StyleSheet.create({
   },
   hostShell: {
     minHeight: "100vh",
+    backgroundColor: "#09324a",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    padding: 28,
+    gap: 22,
+    alignItems: "center"
+  },
+  homeNav: {
+    width: "100%",
+    maxWidth: 1180,
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 18
+  },
+  homeBrand: {
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "900",
+    textShadowColor: "rgba(0,0,0,0.22)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
+  },
+  homeEvent: {
+    color: "#dff5ff",
+    fontSize: 14,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    textShadowColor: "rgba(0,0,0,0.22)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
+  },
+  coverLayout: {
+    width: "100%",
+    maxWidth: 1420,
+    minHeight: "calc(100vh - 118px)",
+    display: "grid",
+    gridTemplateColumns: "minmax(240px, 320px) minmax(540px, 1.65fr) minmax(190px, 270px)",
+    alignItems: "center",
+    gap: 26
+  },
+  coverLayoutStacked: {
+    minHeight: "auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
+  },
+  coverSideStacked: {
+    maxWidth: 520
+  },
+  coverCenter: {
+    width: "100%",
+    minWidth: 0,
+    minHeight: 620,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 24,
+    paddingBottom: 20
+  },
+  coverCenterStacked: {
+    minHeight: 420,
+    paddingVertical: 22
+  },
+  titleLockup: {
+    alignItems: "center"
+  },
+  titleSmall: {
+    color: "#ffffff",
+    fontSize: 42,
+    lineHeight: 44,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 8
+  },
+  titleHigher: {
+    color: "#53b5e0",
+    fontSize: 112,
+    lineHeight: 104,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.42)",
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 10
+  },
+  titleHigherNarrow: {
+    fontSize: 68,
+    lineHeight: 66
+  },
+  titleLower: {
+    color: "#ffffff",
+    fontSize: 104,
+    lineHeight: 98,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: "rgba(21,151,211,0.82)",
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 2
+  },
+  titleLowerNarrow: {
+    fontSize: 64,
+    lineHeight: 62
+  },
+  coverQuestion: {
+    color: "#ffffff",
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.34)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
+  },
+  coverActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 18,
+    flexWrap: "wrap"
+  },
+  coverButton: {
+    minWidth: 250,
+    minHeight: 72,
+    borderRadius: 36,
+    backgroundColor: "#53b5e0",
+    paddingHorizontal: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderColor: "#ffffff",
+    borderWidth: 2
+  },
+  coverButtonText: {
+    color: "#ffffff",
+    fontSize: 30,
+    fontWeight: "900"
+  },
+  coverButtonArrow: {
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "900"
+  },
+  qrCardSmall: {
+    minWidth: 132,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    padding: 10,
+    alignItems: "center",
+    gap: 6,
+    borderColor: "#dff5ff",
+    borderWidth: 2
+  },
+  qrCardText: {
+    color: "#1597d3",
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  coverLeaderboard: {
+    width: "100%",
+    maxWidth: 340,
+    minHeight: 470,
+    borderRadius: 8,
+    borderColor: "#dff5ff",
+    borderWidth: 3,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    padding: 18,
+    paddingTop: 24,
+    gap: 10,
+    alignItems: "stretch",
+    justifyContent: "center",
+    position: "relative"
+  },
+  coverQrPanel: {
+    width: "100%",
+    maxWidth: 270,
+    minHeight: 470,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  qrCardLarge: {
+    width: "100%",
+    aspectRatio: 1,
+    maxWidth: 250,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderColor: "#dff5ff",
+    borderWidth: 4,
+    padding: 16
+  },
+  leaderRibbon: {
+    alignSelf: "center",
+    color: "#09324a",
+    backgroundColor: "#ffd447",
+    borderRadius: 18,
+    paddingVertical: 7,
+    paddingHorizontal: 24,
+    fontSize: 15,
+    fontWeight: "900",
+    position: "absolute",
+    top: -18
+  },
+  coverScoreRow: {
+    minHeight: 44,
+    borderRadius: 8,
     backgroundColor: "#eaf8ff",
-    padding: 24,
-    gap: 22
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10
+  },
+  coverScoreRank: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#1597d3",
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "center",
+    lineHeight: 28
+  },
+  coverScoreName: {
+    flex: 1,
+    color: "#09324a",
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  coverScoreValue: {
+    color: "#1597d3",
+    fontSize: 24,
+    fontWeight: "900"
+  },
+  emptyLeaderRows: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4
+  },
+  emptyLeaderText: {
+    color: "#09324a",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  emptyLeaderSubtext: {
+    color: "#0f5c83",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  coverNetworkInput: {
+    width: "100%",
+    maxWidth: 420,
+    height: 42,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.62)",
+    borderRadius: 8,
+    backgroundColor: "rgba(9,50,74,0.5)",
+    color: "#ffffff",
+    paddingHorizontal: 14,
+    fontSize: 14,
+    textAlign: "center",
+    outlineStyle: "none"
   },
   topNav: {
     width: "100%",
@@ -797,44 +1057,41 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   gameShell: {
-    minHeight: "100vh",
+    minHeight: "100dvh",
     width: "100%",
-    maxWidth: 1180,
+    maxWidth: 520,
     marginHorizontal: "auto",
-    padding: 18,
-    gap: 14,
-    justifyContent: "center",
-    backgroundColor: "#eaf8ff",
-    backgroundSize: "cover",
-    backgroundPosition: "center"
+    backgroundColor: "#09324a",
+    position: "relative",
+    overflow: "hidden"
   },
   gameTopbar: {
-    minHeight: 46,
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
-    borderColor: "#b9e6f7",
-    borderWidth: 1,
+    minHeight: 48,
+    backgroundColor: "rgba(9,50,74,0.78)",
+    borderBottomColor: "rgba(223,245,255,0.28)",
+    borderBottomWidth: 1,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8
+    gap: 8,
+    position: "relative",
+    zIndex: 5
   },
   statText: {
-    color: "#0f5c83",
+    color: "#dff5ff",
     fontSize: 14,
-    fontWeight: "800"
+    fontWeight: "900"
   },
   scoreTicker: {
-    color: "#1597d3",
-    fontSize: 22,
+    color: "#ffd447",
+    fontSize: 23,
     fontWeight: "900"
   },
   duelStage: {
-    minHeight: 530,
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
+    minHeight: "calc(100dvh - 154px)",
+    display: "flex",
+    flexDirection: "column",
     position: "relative"
   },
   duelStageCompact: {
@@ -843,40 +1100,54 @@ const styles = StyleSheet.create({
     flexDirection: "column"
   },
   duelCard: {
-    minHeight: 530,
-    backgroundColor: "#ffffff",
-    borderColor: "#b9e6f7",
-    borderWidth: 1,
-    borderRadius: 8,
+    flex: 1,
+    minHeight: 260,
+    backgroundColor: "#1597d3",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
     padding: 22,
-    gap: 22,
+    gap: 16,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden"
+    overflow: "hidden",
+    position: "relative"
   },
   duelCardRight: {
-    backgroundColor: "#1597d3"
+    borderTopColor: "#ffffff",
+    borderTopWidth: 3
+  },
+  duelPhotoShade: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(7,31,49,0.18)"
   },
   countryStamp: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: "#ffd447",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    borderColor: "#ffffff",
+    borderWidth: 2
   },
   flag: {
     color: "#09324a",
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "900"
   },
   duelTextBlock: {
     gap: 6,
-    alignItems: "center"
+    alignItems: "center",
+    position: "relative",
+    zIndex: 2
   },
   cardPrompt: {
-    color: "#0f5c83",
-    fontSize: 17,
+    color: "#dff5ff",
+    fontSize: 13,
     fontWeight: "900",
     textTransform: "uppercase"
   },
@@ -884,66 +1155,87 @@ const styles = StyleSheet.create({
     color: "#dff5ff"
   },
   countryName: {
-    color: "#09324a",
-    fontSize: 42,
-    lineHeight: 48,
+    color: "#ffffff",
+    fontSize: 38,
+    lineHeight: 42,
     fontWeight: "900",
-    textAlign: "center"
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
   },
   countryNameRight: {
     color: "#fffaf0"
   },
   countryRegion: {
-    color: "#0f5c83",
+    color: "#dff5ff",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "900",
     textAlign: "center"
   },
   countryRegionRight: {
     color: "#dff5ff"
   },
   populationBlock: {
-    minHeight: 98,
+    minHeight: 92,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 2
   },
   populationLabel: {
-    color: "#0f5c83",
+    color: "#ffffff",
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "900",
     textTransform: "uppercase"
   },
   populationLabelRight: {
     color: "#dff5ff"
   },
   populationValue: {
-    color: "#09324a",
-    fontSize: 44,
-    lineHeight: 50,
-    fontWeight: "900"
+    color: "#ffd447",
+    fontSize: 48,
+    lineHeight: 54,
+    fontWeight: "900",
+    textShadowColor: "rgba(0,0,0,0.34)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
   },
   populationValueRight: {
     color: "#fffaf0"
   },
   actionStack: {
     width: "100%",
-    maxWidth: 260,
-    gap: 12
+    maxWidth: 310,
+    gap: 10,
+    alignItems: "center",
+    position: "relative",
+    zIndex: 2
+  },
+  choiceLead: {
+    color: "#ffffff",
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8
   },
   centerBadge: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    backgroundColor: "#ffd447",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#ffffff",
     borderColor: "#ffffff",
-    borderWidth: 5,
+    borderWidth: 4,
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
     left: "50%",
     top: "50%",
-    marginLeft: -52,
-    marginTop: -52,
+    marginLeft: -36,
+    marginTop: -36,
     zIndex: 3
   },
   centerBadgeCompact: {
@@ -962,16 +1254,15 @@ const styles = StyleSheet.create({
   },
   centerLabel: {
     color: "#09324a",
-    fontSize: 12,
+    fontSize: 24,
     fontWeight: "900"
   },
   roundFooter: {
-    minHeight: 118,
-    borderRadius: 8,
+    minHeight: 106,
     backgroundColor: "#ffffff",
-    borderColor: "#b9e6f7",
-    borderWidth: 1,
-    padding: 14,
+    borderTopColor: "#b9e6f7",
+    borderTopWidth: 1,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     gap: 8
@@ -989,8 +1280,8 @@ const styles = StyleSheet.create({
   },
   choiceButton: {
     width: "100%",
-    minHeight: 70,
-    borderRadius: 8,
+    minHeight: 62,
+    borderRadius: 31,
     backgroundColor: "#ffd447",
     alignItems: "center",
     justifyContent: "center",
@@ -1010,8 +1301,8 @@ const styles = StyleSheet.create({
   },
   choiceButtonDark: {
     width: "100%",
-    minHeight: 70,
-    borderRadius: 8,
+    minHeight: 62,
+    borderRadius: 31,
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
@@ -1036,8 +1327,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase"
   },
   feedbackBox: {
+    width: "100%",
+    maxWidth: 340,
     borderRadius: 8,
-    padding: 18,
+    padding: 12,
     alignItems: "center",
     gap: 6
   },
